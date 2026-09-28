@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EvidenceChain</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-left">
+    <h1>EvidenceChain</h1>
+    <p class="subtitle">Digital Forensic Evidence Integrity &amp; Chain-of-Custody</p>
+  </div>
+  <div class="header-right">
+    <div id="networkStatus" class="network-status">Connecting…</div>
+    <div class="contract-info">
+      Contract: <span id="contractAddress" class="mono">—</span>
+    </div>
+    <div class="account-picker">
+      <label for="accountSelect">Act as</label>
+      <select id="accountSelect"></select>
+      <div class="account-meta">
+        <span id="accountAddress" class="mono">—</span>
+        <span id="accountRoleBadge" class="badge">—</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div id="connectionBanner" class="banner hidden">
+  ⚠ Not connected to the Hardhat node. Start <code>npx hardhat node</code>, then run
+  <code>npm run deploy</code> and <code>npm run seed</code>, and click Retry.
+  <button id="retryConnectionBtn">Retry</button>
+</div>
+
+<nav class="tab-bar">
+  <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+  <button class="tab-btn" data-tab="register">Register Evidence</button>
+  <button class="tab-btn" data-tab="transfer">Transfer Custody</button>
+  <button class="tab-btn" data-tab="verify">Verify Integrity</button>
+  <button class="tab-btn" data-tab="history">Custody History</button>
+  <button class="tab-btn hidden" id="adminTabBtn" data-tab="admin">Admin</button>
+</nav>
+
+<main class="tab-content">
+
+  <!-- Tab 1: Dashboard -->
+  <section id="tab-dashboard" class="tab-pane active">
+    <h2>All Evidence</h2>
+    <div id="incomingTransfersCard" class="card hidden">
+      <h3>Incoming Transfers</h3>
+      <div id="incomingTransfersList"></div>
+    </div>
+    <div class="card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th><th>Case ID</th><th>File Name</th><th>Current Holder</th><th>Status</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="dashboardTableBody"></tbody>
+      </table>
+      <p id="dashboardEmpty" class="empty-msg hidden">No evidence registered yet.</p>
+    </div>
+  </section>
+
+  <!-- Tab 2: Register Evidence -->
+  <section id="tab-register" class="tab-pane">
+    <h2>Register Evidence</h2>
+    <p id="registerDenied" class="notice hidden">Only investigators can register evidence.</p>
+    <div id="registerForm" class="card">
+      <label>Case ID</label>
+      <input id="regCaseId" type="text" placeholder="e.g. CASE-2026-021" />
+
+      <label>Description</label>
+      <input id="regDescription" type="text" placeholder="e.g. Suspect chat log export" />
+
+      <label>File</label>
+      <input id="regFile" type="file" />
+
+      <div id="regFileInfo" class="file-info hidden">
+        <div><strong>File:</strong> <span id="regFileName"></span> (<span id="regFileSize"></span>)</div>
+        <div><strong>SHA-256 hash (computed locally):</strong></div>
+        <div id="regFileHash" class="mono hash-box"></div>
+        <p class="hint">Computed locally — file is NOT uploaded.</p>
+      </div>
+
+      <button id="registerBtn" disabled>Register on Blockchain</button>
+
+      <div id="registerResult" class="result-box hidden"></div>
+    </div>
+  </section>
+
+  <!-- Tab 3: Transfer Custody -->
+  <section id="tab-transfer" class="tab-pane">
+    <h2>Transfer Custody</h2>
+    <div class="card">
+      <label>Evidence (held by you, in custody)</label>
+      <select id="transferEvidenceSelect"></select>
+
+      <label>Transfer to</label>
+      <select id="transferRecipientSelect"></select>
+
+      <label>Note</label>
+      <input id="transferNote" type="text" placeholder="e.g. Sent for log analysis" />
+
+      <button id="requestTransferBtn">Request Transfer</button>
+      <div id="transferResult" class="result-box hidden"></div>
+    </div>
+
+    <div class="card">
+      <h3>Outgoing Pending Transfers</h3>
+      <div id="outgoingTransfersList"></div>
+      <p id="outgoingEmpty" class="empty-msg hidden">No pending outgoing transfers.</p>
+    </div>
+  </section>
+
+  <!-- Tab 4: Verify Integrity -->
+  <section id="tab-verify" class="tab-pane">
+    <h2>Verify Integrity</h2>
+
+    <div class="card">
+      <h3>Mode A — Verify against a known Evidence ID</h3>
+      <label>Evidence ID</label>
+      <input id="verifyId" type="number" min="1" placeholder="e.g. 2" />
+      <label>File</label>
+      <input id="verifyFile" type="file" />
+      <button id="verifyBtn">Verify</button>
+
+      <div id="verifyResultPanel" class="verify-panel hidden">
+        <div id="verifyResultText" class="verify-result-text"></div>
+        <div class="hash-compare">
+          <div><strong>On-chain hash:</strong></div>
+          <div id="verifyOnChainHash" class="mono hash-box"></div>
+          <div><strong>Computed hash:</strong></div>
+          <div id="verifyComputedHash" class="mono hash-box"></div>
+        </div>
+        <button id="admitBtn" class="hidden">Admit as Evidence</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Mode B — Find a file on the blockchain</h3>
+      <label>File</label>
+      <input id="findFile" type="file" />
+      <button id="findBtn">Find on blockchain</button>
+      <div id="findResult" class="result-box hidden"></div>
+    </div>
+  </section>
+
+  <!-- Tab 5: Custody History -->
+  <section id="tab-history" class="tab-pane">
+    <h2>Custody History</h2>
+    <div class="card">
+      <label>Evidence ID</label>
+      <input id="historyId" type="number" min="1" placeholder="e.g. 2" />
+      <button id="loadHistoryBtn">Load</button>
+    </div>
+
+    <div id="historySummaryCard" class="card hidden">
+      <h3>Evidence Summary</h3>
+      <table class="summary-table">
+        <tbody id="historySummaryBody"></tbody>
+      </table>
+    </div>
+
+    <div id="historyTimelineCard" class="card hidden">
+      <h3>Custody Timeline</h3>
+      <div id="historyTimeline" class="timeline"></div>
+    </div>
+  </section>
+
+  <!-- Tab 6: Admin -->
+  <section id="tab-admin" class="tab-pane">
+    <h2>Admin — Manage Handlers</h2>
+    <div class="card">
+      <label>Address</label>
+      <input id="adminAddress" type="text" placeholder="0x..." />
+      <label>Name</label>
+      <input id="adminName" type="text" placeholder="e.g. Det. Silva" />
+      <label>Role</label>
+      <select id="adminRole">
+        <option value="1">Investigator</option>
+        <option value="2">Analyst</option>
+        <option value="3">Custodian</option>
+        <option value="4">Court</option>
+      </select>
+      <button id="addHandlerBtn">Add Handler</button>
+      <div id="adminResult" class="result-box hidden"></div>
+    </div>
+
+    <div class="card">
+      <h3>Handlers</h3>
+      <table class="data-table">
+        <thead>
+          <tr><th>Address</th><th>Name</th><th>Role</th><th>Active</th><th></th></tr>
+        </thead>
+        <tbody id="adminHandlersTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<div id="toastContainer" class="toast-container"></div>
+
+<script src="lib/ethers.umd.min.js"></script>
+<script src="contract-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
